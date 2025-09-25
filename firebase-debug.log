@@ -1,0 +1,75 @@
+[debug] [2025-09-25T08:58:28.909Z] ----------------------------------------------------------------------
+[debug] [2025-09-25T08:58:28.913Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\achel\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2025-09-25T08:58:28.913Z] CLI Version:   14.17.0
+[debug] [2025-09-25T08:58:28.914Z] Platform:      win32
+[debug] [2025-09-25T08:58:28.914Z] Node Version:  v22.14.0
+[debug] [2025-09-25T08:58:28.914Z] Time:          Thu Sep 25 2025 14:28:28 GMT+0530 (India Standard Time)
+[debug] [2025-09-25T08:58:28.914Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-09-25T08:58:29.179Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-09-25T08:58:29.179Z] > authorizing via signed-in user (achelvanvk@gmail.com)
+[debug] [2025-09-25T08:58:29.179Z] [iam] checking project serveeasy-8565e for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-09-25T08:58:29.181Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:29.181Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:29.182Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e:testIamPermissions [none]
+[debug] [2025-09-25T08:58:29.182Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e:testIamPermissions x-goog-quota-user=projects/serveeasy-8565e
+[debug] [2025-09-25T08:58:29.182Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-09-25T08:58:30.840Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e:testIamPermissions 200
+[debug] [2025-09-25T08:58:30.840Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-09-25T08:58:30.841Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:30.841Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:30.841Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/serveeasy-8565e/serviceAccounts/serveeasy-8565e@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-09-25T08:58:30.841Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/serveeasy-8565e/serviceAccounts/serveeasy-8565e@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-09-25T08:58:32.640Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/serveeasy-8565e/serviceAccounts/serveeasy-8565e@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-09-25T08:58:32.640Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/serveeasy-8565e/serviceAccounts/serveeasy-8565e@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'serveeasy-8565e'...
+[info] 
+[info] i  deploying functions 
+[debug] [2025-09-25T08:58:32.645Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:32.645Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:32.645Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudresourcemanager.googleapis.com [none]
+[debug] [2025-09-25T08:58:32.645Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudresourcemanager.googleapis.com x-goog-quota-user=projects/serveeasy-8565e
+[debug] [2025-09-25T08:58:34.598Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudresourcemanager.googleapis.com 200
+[debug] [2025-09-25T08:58:34.598Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudresourcemanager.googleapis.com [omitted]
+[debug] [2025-09-25T08:58:34.639Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:34.639Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:34.639Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e [none]
+[debug] [2025-09-25T08:58:35.023Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e 200
+[debug] [2025-09-25T08:58:35.024Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/serveeasy-8565e {"projectNumber":"878377272893","projectId":"serveeasy-8565e","lifecycleState":"ACTIVE","name":"ServeEasy","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-09-25T05:01:34.060399Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2025-09-25T08:58:35.028Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:35.028Z] Checked if tokens are valid: true, expires at: 1758794035226
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-09-25T08:58:35.028Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:35.029Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:35.029Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com [none]
+[debug] [2025-09-25T08:58:35.029Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com x-goog-quota-user=projects/serveeasy-8565e
+[debug] [2025-09-25T08:58:35.030Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com [none]
+[debug] [2025-09-25T08:58:35.030Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com x-goog-quota-user=projects/serveeasy-8565e
+[debug] [2025-09-25T08:58:35.475Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com 200
+[debug] [2025-09-25T08:58:35.476Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com [omitted]
+[warn] !  functions: missing required API cloudbuild.googleapis.com. Enabling now... 
+[debug] [2025-09-25T08:58:35.477Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:35.477Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:35.478Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com:enable [none]
+[debug] [2025-09-25T08:58:35.478Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com:enable x-goog-quota-user=projects/serveeasy-8565e
+[debug] [2025-09-25T08:58:36.700Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com:enable 400
+[debug] [2025-09-25T08:58:36.700Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/cloudbuild.googleapis.com:enable [omitted]
+[debug] [2025-09-25T08:58:37.039Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com 200
+[debug] [2025-09-25T08:58:37.039Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com [omitted]
+[warn] !  artifactregistry: missing required API artifactregistry.googleapis.com. Enabling now... 
+[debug] [2025-09-25T08:58:37.040Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:37.040Z] Checked if tokens are valid: true, expires at: 1758794035226
+[debug] [2025-09-25T08:58:37.040Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com:enable [none]
+[debug] [2025-09-25T08:58:37.040Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com:enable x-goog-quota-user=projects/serveeasy-8565e
+[debug] [2025-09-25T08:58:37.518Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com:enable 400
+[debug] [2025-09-25T08:58:37.519Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/serveeasy-8565e/services/artifactregistry.googleapis.com:enable [omitted]
+[debug] [2025-09-25T08:58:41.749Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\achel\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:275:49)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)
+[error] 
+[error] Error: An unexpected error has occurred.
