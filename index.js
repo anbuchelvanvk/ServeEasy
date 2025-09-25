@@ -23,6 +23,9 @@ app.post('/api/handler', async (req, res) => {
   
   try {
     switch (task) {
+      case "getCustomerByPhone": // <-- ADD THIS NEW CASE
+      return await handleGetCustomerByPhone(req, res);
+      
       case "getRegionByKey":
         return await handleGetRegionByKey(req, res);
       
@@ -99,7 +102,25 @@ async function handleFindAvailableSlots(req, res) {
   return res.status(200).send({ slots: uniqueSlots.slice(0, 4) });
 }
 
+async function handleGetCustomerByPhone(req, res) {
+  const phone = req.body.phone;
 
+  if (!phone || phone.length !== 10) {
+    return res.status(400).send({ error: "A valid 10-digit phone number is required." });
+  }
+
+  // Construct the direct path to the customer data
+  const customerRef = db.ref(`/customers/${phone}`);
+  const snapshot = await customerRef.once("value");
+
+  if (snapshot.exists()) {
+    // Customer found, return their details
+    return res.status(200).send({ customer: snapshot.val() });
+  } else {
+    // No customer found for this number
+    return res.status(200).send({ customer: null });
+  }
+}
 // --- HELPER FUNCTIONS ---
 
 function calculateFreeSlots(workingHours, bookedSlots) {
