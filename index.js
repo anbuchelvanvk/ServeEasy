@@ -54,7 +54,7 @@ async function handleGetRegionByKey(req, res) {
     return res.status(400).send({ error: "A valid 6-digit pincode is required." });
   }
   const prefix = pincode.substring(0, 3);
-  const regionRef = db.ref(`/regionCache/${prefix}`);
+  const regionRef = db.ref(`/regions/${prefix}`);
   const snapshot = await regionRef.once("value");
   const regionName = snapshot.val();
 
