@@ -66,49 +66,44 @@ async function handleGetRegionByKey(req, res) {
 
 // Replace your old handleFindAvailableSlots function with this one
 
-async function handleFindAvailableSlots(req, res) {
-  console.log("--- Starting findAvailableSlots ---");
+// Replace your old handleFindAvailableSlots function with this new, simplified version
 
-  // Log the exact inputs received from the agent
+async function handleFindAvailableSlots(req, res) {
+  console.log("--- Starting findAvailableSlots (Simplified Logic) ---");
+
   const { region, skill, appliance, preferred_day } = req.body;
   console.log("Inputs Received:", { region, skill, appliance, preferred_day });
 
-  // 1. Get the target date and day of the week
   const { dateString, dayOfWeek } = getDateInfo(preferred_day);
   console.log("Calculated Date Info:", { dateString, dayOfWeek });
 
-  // 2. Get qualified technician IDs from indexes
+  // 1. Get potential technician IDs using ONLY the skill index
   const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
-  const applianceTechsSnap = await db.ref(`/techniciansByAppliance/${appliance}`).once("value");
 
-  if (!skilledTechsSnap.exists() || !applianceTechsSnap.exists()) {
-    console.log("Result: No technicians found for this skill or appliance in the indexes.");
+  if (!skilledTechsSnap.exists()) {
+    console.log("Result: No technicians found for this skill in the index.");
     return res.status(200).send({ slots: [] });
   }
 
-  const skilledTechs = Object.keys(skilledTechsSnap.val());
-  const applianceTechs = Object.keys(applianceTechsSnap.val());
-  const potentialTechIds = skilledTechs.filter(id => applianceTechs.includes(id));
-  console.log("Potential Tech IDs after index lookup:", potentialTechIds);
-
-  if (potentialTechIds.length === 0) {
-    console.log("Result: No technicians matched both skill and appliance.");
-    return res.status(200).send({ slots: [] });
-  }
+  const potentialTechIds = Object.keys(skilledTechsSnap.val());
+  console.log("Potential Tech IDs from skill lookup:", potentialTechIds);
   
   let allAvailableSlots = [];
   const appointmentsSnap = await db.ref(`/appointments/${dateString}`).once("value");
   const todaysAppointments = appointmentsSnap.val() || {};
 
-  // 4. Loop through potential technicians to calculate slots
+  // 2. Loop through potential technicians to filter and calculate slots
   for (const techId of potentialTechIds) {
     console.log(`\n--- Checking Technician: ${techId} ---`);
     const techSnap = await db.ref(`/technicians/${techId}`).once("value");
     const technician = techSnap.val();
 
-    // 5. Final filtering by region and working hours
-    if (technician && technician.TechRegion === region) {
-      console.log(`Region Match: SUCCESS (${technician.TechRegion} === ${region})`);
+    // 3. Perform final filtering in the code (Region AND Appliance)
+    if (technician &&
+        technician.TechRegion === region &&
+        technician.appliances_supported.includes(appliance)) { // <-- The appliance is now checked here
+
+      console.log(`Filter Match: SUCCESS (Region: ${region}, Appliance: ${appliance})`);
       const workingHours = technician.working_hours[dayOfWeek];
       
       if (workingHours && workingHours !== "none") {
@@ -121,14 +116,13 @@ async function handleFindAvailableSlots(req, res) {
         console.log(`Schedule Match: FAILED (Technician does not work on ${dayOfWeek})`);
       }
     } else {
-      console.log(`Region Match: FAILED (Technician region is '${technician.TechRegion}', but request is for '${region}')`);
+      console.log(`Filter Match: FAILED for ${techId}`);
     }
   }
 
-  // 7. Return a clean, sorted, unique list of slots
+  // 4. Return the final list of slots
   const uniqueSlots = [...new Set(allAvailableSlots)].sort();
   console.log("Final unique slots to be returned:", uniqueSlots);
-  console.log("--- Function Finished ---");
   return res.status(200).send({ slots: uniqueSlots.slice(0, 4) });
 }
 
