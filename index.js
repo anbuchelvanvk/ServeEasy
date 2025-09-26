@@ -86,60 +86,55 @@ async function handleGetRegionByKey(req, res) {
   return res.status(200).send({ region: regionName || null });
 }
 
+
 async function handleFindAvailableSlots(req, res) {
-  console.log("--- Starting findAvailableSlots (Simplified Logic) ---");
+  console.log("--- Starting findAvailableSlots ---");
   const { region, skill, appliance, preferred_day } = req.body;
-  console.log("Inputs Received:", { region, skill, appliance, preferred_day });
 
   const { dateString, dayOfWeek } = getDateInfo(preferred_day);
-  console.log("Calculated Date Info:", { dateString, dayOfWeek });
 
   const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
   if (!skilledTechsSnap.exists()) {
-    console.log("Result: No technicians found for this skill in the index.");
     return res.status(200).send({ slots: [] });
   }
   const potentialTechIds = Object.keys(skilledTechsSnap.val());
-  console.log("Potential Tech IDs from skill lookup:", potentialTechIds);
   
   let allAvailableSlots = [];
   const appointmentsSnap = await db.ref(`/appointments/${dateString}`).once("value");
   const todaysAppointments = appointmentsSnap.val() || {};
 
   for (const techId of potentialTechIds) {
-    console.log(`\n--- Checking Technician: ${techId} ---`);
     const techSnap = await db.ref(`/technicians/${techId}`).once("value");
     const technician = techSnap.val();
-    if (!technician) {
-      console.log(`Error: Could not fetch profile for ${techId}.`);
-      continue;
-    }
+    if (!technician) continue;
 
-    console.log(`Data for ${techId}: Region is '${technician.TechRegion}', Appliances are [${technician.appliances_supported}]`);
     const regionMatch = technician.TechRegion === region;
     const applianceMatch = Array.isArray(technician.appliances_supported) && technician.appliances_supported.includes(appliance);
-    console.log(`Checking filter conditions for ${techId}: regionMatch is ${regionMatch}, applianceMatch is ${applianceMatch}`);
 
     if (regionMatch && applianceMatch) {
-      console.log(`Filter Match: SUCCESS for ${techId}`);
       const workingHours = technician.working_hours[dayOfWeek];
       if (workingHours && workingHours !== "none") {
-        console.log(`Schedule Match: SUCCESS (Works on ${dayOfWeek} from ${workingHours})`);
         const bookedSlots = todaysAppointments[techId] || [];
         const freeSlots = calculateFreeSlots(workingHours, bookedSlots);
-        console.log(`Calculated Free Slots for ${techId}:`, freeSlots);
-        allAvailableSlots.push(...freeSlots);
-      } else {
-        console.log(`Schedule Match: FAILED (Technician does not work on ${dayOfWeek})`);
+        
+        // --- THIS IS THE KEY CHANGE ---
+        // Instead of just adding strings, create rich objects
+        for (const slotTime of freeSlots) {
+            allAvailableSlots.push({
+                time: slotTime,
+                techId: techId, // Use the ID from the loop
+                techName: technician.TechName
+            });
+        }
+        // --- END OF CHANGE ---
       }
-    } else {
-      console.log(`Filter Match: FAILED for ${techId}`);
     }
   }
 
-  const uniqueSlots = [...new Set(allAvailableSlots)].sort();
-  console.log("Final unique slots to be returned:", uniqueSlots);
-  return res.status(200).send({ slots: uniqueSlots.slice(0, 4) });
+  // Sort slots by time
+  allAvailableSlots.sort((a, b) => a.time.localeCompare(b.time));
+  
+  return res.status(200).send({ slots: allAvailableSlots.slice(0, 4) });
 }
 
 
