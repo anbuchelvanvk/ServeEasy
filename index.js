@@ -165,7 +165,110 @@ async function handleCancelTicket(req, res) {
 }
 
 // ... other handlers like handleGetCustomerByPhone, handleGetRegionByKey ...
+/**
+ * The "ruler" algorithm. Takes working hours (e.g., "09:00-18:00") and a list of
+ * booked slots (e.g., [{start: "11:00", end: "12:30"}]) and returns available 2-hour slots.
+ */
+function calculateFreeSlots(workingHours, bookedSlots) {
+  const [workStart, workEnd] = workingHours.split('-').map(timeToMinutes);
+  const serviceDuration = 120; // 2 hours in minutes
+  let availableSlots = [];
+  let currentTime = workStart;
 
+  // Sort booked slots by start time to process them in order
+  bookedSlots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+
+  for (const booked of bookedSlots) {
+    const bookedStart = timeToMinutes(booked.start);
+    const bookedEnd = timeToMinutes(booked.end);
+    
+    // Check for free time *before* the current booking
+    while (currentTime + serviceDuration <= bookedStart) {
+      availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + service_duration)}`);
+      currentTime += serviceDuration;
+    }
+    // Move current time past this booking
+    currentTime = Math.max(currentTime, bookedEnd);
+  }
+
+  // Check for free time *after* the last booking until the end of the day
+  while (currentTime + serviceDuration <= workEnd) {
+    availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + serviceDuration)}`);
+    currentTime += serviceDuration;
+  }
+
+  return availableSlots;
+}
+
+/**
+ * Converts "today", "tomorrow", "afternoon", etc., into a specific date,
+ * day of the week, and time window. It is timezone-aware for India (IST).
+ */
+function getDateInfo(preferredDay) {
+    // This function is timezone-aware for India (IST)
+    const now = new Date();
+    // Convert current UTC date to IST by adding the offset (5 hours and 30 minutes)
+    const nowInIST = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+
+    const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    let targetDate = new Date(nowInIST); // Create a copy to avoid modifying the original
+
+    if (preferredDay) {
+        const dayLower = preferredDay.toLowerCase();
+        if (dayLower.includes('tomorrow')) {
+            targetDate.setDate(targetDate.getDate() + 1);
+        }
+        // This is where you would add more advanced parsing for "next monday", etc.
+    }
+
+    // Check if the calculated date is in the past, relative to the start of today in IST
+    const startOfTodayIST = new Date(nowInIST.setHours(0, 0, 0, 0));
+    if (targetDate < startOfTodayIST) {
+        console.log("Error: Requested date is in the past.");
+        return null; 
+    }
+    
+    // Define time windows
+    const timeWindows = {
+        morning: { start: 9 * 60, end: 12 * 60 },   // 9 AM - 12 PM
+        afternoon: { start: 12 * 60, end: 17 * 60 }, // 12 PM - 5 PM
+        evening: { start: 17 * 60, end: 21 * 60 }    // 5 PM - 9 PM
+    };
+
+    let timeWindow = { start: 0, end: 24 * 60 }; // Default to full day
+    const phraseLower = (preferredDay || "").toLowerCase();
+    if (phraseLower.includes('morning')) timeWindow = timeWindows.morning;
+    if (phraseLower.includes('afternoon')) timeWindow = timeWindows.afternoon;
+    if (phraseLower.includes('evening')) timeWindow = timeWindows.evening;
+    
+    const year = targetDate.getUTCFullYear();
+    const month = (targetDate.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = targetDate.getUTCDate().toString().padStart(2, '0');
+    
+    return {
+        dateString: `${year}-${month}-${day}`,
+        dayOfWeek: dayNames[targetDate.getUTCDay()],
+        timeWindow: timeWindow
+    };
+}
+
+
+/**
+ * Utility to convert a time string like "09:30" into total minutes from midnight.
+ */
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
+ * Utility to convert total minutes from midnight back into a time string "HH:MM".
+ */
+function minutesToTime(minutes) {
+  const h = Math.floor(minutes / 60).toString().padStart(2, '0');
+  const m = (minutes % 60).toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
 
 // --- HELPER FUNCTIONS ---
 
