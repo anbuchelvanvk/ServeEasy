@@ -59,15 +59,12 @@ app.post('/api/handler', async (req, res) => {
 
 async function handleFindAvailableSlots(req, res) {
   const { region, skill, appliance, preferred_time_phrase } = req.body;
-  console.log("Inputs Received:", { region, skill, appliance, preferred_time_phrase });
-
   const dateInfo = getDateInfo(preferred_time_phrase);
   if (!dateInfo) {
     return res.status(400).send({ error: "Invalid or past date specified. Please provide a future date." });
   }
   const { dateString, dayOfWeek, timeWindow } = dateInfo;
-  console.log("Calculated Date Info:", { dateString, dayOfWeek, timeWindow });
-
+  
   const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
   if (!skilledTechsSnap.exists()) return res.status(200).send({ slots: [] });
   
@@ -94,45 +91,74 @@ async function handleFindAvailableSlots(req, res) {
     }
   }
 
-  // Filter slots by the user's preferred time window (e.g., "afternoon")
   const filteredSlots = allAvailableSlots.filter(slot => {
     const slotStart = timeToMinutes(slot.time.split('-')[0]);
     return slotStart >= timeWindow.start && slotStart < timeWindow.end;
   });
 
-  console.log("Final filtered slots to be returned:", filteredSlots);
-  return res.status(200).send({ slots: filteredSlots.slice(0, 4) });
+  // --- NEW DEBUG LOG ---
+  const finalResponseObject = { slots: filteredSlots.slice(0, 4) };
+  console.log("Type of final response object:", typeof finalResponseObject);
+  // --- END OF DEBUG LOG ---
+
+  return res.status(200).send(finalResponseObject);
 }
 
+// Replace your handleCreateTicket function with this improved version
+
 async function handleCreateTicket(req, res) {
-    const { dateString, slot, customerInfo, jobInfo } = req.body;
-    console.log(`Creating ticket for Tech: ${slot.techId} on ${dateString}`);
+  const { dateString, slot, customerInfo, jobInfo } = req.body;
+  console.log(`--- Starting createTicket for Customer: ${customerInfo.phone} ---`);
+
+  // --- NEW: DUPLICATE TICKET CHECK ---
+  const ticketsRef = db.ref('/tickets');
+  const query = ticketsRef.orderByChild('CustPhone').equalTo(customerInfo.phone);
+  const snapshot = await query.once('value');
+
+  if (snapshot.exists()) {
+    const existingTickets = snapshot.val();
+    for (const ticketId in existingTickets) {
+      const ticket = existingTickets[ticketId];
+      // Check for an open ticket (not Completed or Cancelled) for the same appliance
+      if (ticket.appliance === jobInfo.appliance && (ticket.status === 'Booked' || ticket.status === 'In Progress')) {
+        console.log(`Duplicate found: An open ticket (${ticketId}) already exists.`);
+        // Return an error message with the existing ticket ID
+        return res.status(409).send({ 
+          error: "An open ticket for this appliance already exists.",
+          existingTicketId: ticketId 
+        });
+      }
+    }
+  }
+  // --- END OF DUPLICATE CHECK ---
+
+  console.log("No duplicates found. Proceeding to create a new ticket.");
   
-    const techSnap = await db.ref(`/technicians/${slot.techId}`).once("value");
-    if (!techSnap.exists()) return res.status(404).send({ error: "Technician not found." });
-    const technician = techSnap.val();
-  
-    const ticketId = `SR-${Date.now()}`;
-    const [startTime, endTime] = slot.time.split('-');
-  
-    const ticketData = {
-      ticketId, status: "Booked", createdAt: new Date().toISOString(),
-      CustName: customerInfo.name, CustPhone: customerInfo.phone, CustAddress: customerInfo.address,
-      TechId: slot.techId, TechName: slot.techName, TechPhone: technician.TechPhone,
-      appointmentDate: dateString, appointmentTime: slot.time,
-      appliance: jobInfo.appliance, description: jobInfo.description
-    };
-  
-    const appointmentPointer = { start: startTime, end: endTime, ticketId };
-  
-    const updates = {};
-    const newAppointmentRef = db.ref(`/appointments/${dateString}/${slot.techId}`).push();
-    updates[`/tickets/${ticketId}`] = ticketData;
-    updates[`/appointments/${dateString}/${slot.techId}/${newAppointmentRef.key}`] = appointmentPointer;
-  
-    await db.ref().update(updates);
-    console.log(`Ticket created: ${ticketId}`);
-    return res.status(200).send({ status: "confirmed", ticketId });
+  // (The rest of the function is the same as before)
+  const techSnap = await db.ref(`/technicians/${slot.techId}`).once("value");
+  if (!techSnap.exists()) return res.status(404).send({ error: "Technician not found." });
+  const technician = techSnap.val();
+
+  const ticketId = `SR-${Date.now()}`;
+  const [startTime, endTime] = slot.time.split('-');
+
+  const ticketData = {
+    ticketId, status: "Booked", createdAt: new Date().toISOString(),
+    CustName: customerInfo.name, CustPhone: customerInfo.phone, CustAddress: customerInfo.address,
+    TechId: slot.techId, TechName: slot.techName, TechPhone: technician.TechPhone,
+    appointmentDate: dateString, appointmentTime: slot.time,
+    appliance: jobInfo.appliance, description: jobInfo.description
+  };
+
+  const appointmentPointer = { start: startTime, end: endTime, ticketId };
+  const updates = {};
+  const newAppointmentRef = db.ref(`/appointments/${dateString}/${slot.techId}`).push();
+  updates[`/tickets/${ticketId}`] = ticketData;
+  updates[`/appointments/${dateString}/${slot.techId}/${newAppointmentRef.key}`] = appointmentPointer;
+
+  await db.ref().update(updates);
+  console.log(`Ticket created: ${ticketId}`);
+  return res.status(200).send({ status: "confirmed", ticketId });
 }
 
 async function handleGetTicket(req, res) {
@@ -171,32 +197,27 @@ async function handleCancelTicket(req, res) {
  */
 function calculateFreeSlots(workingHours, bookedSlots) {
   const [workStart, workEnd] = workingHours.split('-').map(timeToMinutes);
-  const serviceDuration = 120; // 2 hours in minutes
+  const serviceDuration = 120; // 2 hours
   let availableSlots = [];
   let currentTime = workStart;
 
-  // Sort booked slots by start time to process them in order
   bookedSlots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
 
   for (const booked of bookedSlots) {
     const bookedStart = timeToMinutes(booked.start);
     const bookedEnd = timeToMinutes(booked.end);
     
-    // Check for free time *before* the current booking
     while (currentTime + serviceDuration <= bookedStart) {
-      availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + service_duration)}`);
+      availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + serviceDuration)}`);
       currentTime += serviceDuration;
     }
-    // Move current time past this booking
     currentTime = Math.max(currentTime, bookedEnd);
   }
 
-  // Check for free time *after* the last booking until the end of the day
   while (currentTime + serviceDuration <= workEnd) {
     availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + serviceDuration)}`);
     currentTime += serviceDuration;
   }
-
   return availableSlots;
 }
 
@@ -205,46 +226,34 @@ function calculateFreeSlots(workingHours, bookedSlots) {
  * day of the week, and time window. It is timezone-aware for India (IST).
  */
 function getDateInfo(preferredDay) {
-    // This function is timezone-aware for India (IST)
     const now = new Date();
-    // Convert current UTC date to IST by adding the offset (5 hours and 30 minutes)
     const nowInIST = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-
     const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-    let targetDate = new Date(nowInIST); // Create a copy to avoid modifying the original
-
+    let targetDate = new Date(nowInIST);
     if (preferredDay) {
         const dayLower = preferredDay.toLowerCase();
         if (dayLower.includes('tomorrow')) {
             targetDate.setDate(targetDate.getDate() + 1);
         }
-        // This is where you would add more advanced parsing for "next monday", etc.
     }
-
-    // Check if the calculated date is in the past, relative to the start of today in IST
     const startOfTodayIST = new Date(nowInIST.setHours(0, 0, 0, 0));
     if (targetDate < startOfTodayIST) {
         console.log("Error: Requested date is in the past.");
         return null; 
     }
-    
-    // Define time windows
     const timeWindows = {
-        morning: { start: 9 * 60, end: 12 * 60 },   // 9 AM - 12 PM
-        afternoon: { start: 12 * 60, end: 17 * 60 }, // 12 PM - 5 PM
-        evening: { start: 17 * 60, end: 21 * 60 }    // 5 PM - 9 PM
+        morning: { start: 9 * 60, end: 12 * 60 },
+        afternoon: { start: 12 * 60, end: 17 * 60 },
+        evening: { start: 17 * 60, end: 21 * 60 }
     };
-
-    let timeWindow = { start: 0, end: 24 * 60 }; // Default to full day
+    let timeWindow = { start: 0, end: 24 * 60 };
     const phraseLower = (preferredDay || "").toLowerCase();
     if (phraseLower.includes('morning')) timeWindow = timeWindows.morning;
     if (phraseLower.includes('afternoon')) timeWindow = timeWindows.afternoon;
     if (phraseLower.includes('evening')) timeWindow = timeWindows.evening;
-    
     const year = targetDate.getUTCFullYear();
     const month = (targetDate.getUTCMonth() + 1).toString().padStart(2, '0');
     const day = targetDate.getUTCDate().toString().padStart(2, '0');
-    
     return {
         dateString: `${year}-${month}-${day}`,
         dayOfWeek: dayNames[targetDate.getUTCDay()],
@@ -261,9 +270,6 @@ function timeToMinutes(time) {
   return hours * 60 + minutes;
 }
 
-/**
- * Utility to convert total minutes from midnight back into a time string "HH:MM".
- */
 function minutesToTime(minutes) {
   const h = Math.floor(minutes / 60).toString().padStart(2, '0');
   const m = (minutes % 60).toString().padStart(2, '0');
