@@ -226,72 +226,57 @@ async function handleUpdateTicket(req, res) {
   console.log("1. Received updates payload:", updates);
 
   try {
-    // --- 2. VALIDATE INPUTS ---
     if (!ticketId || !updates) {
-      console.error("-! Validation FAILED: ticketId and updates object are required.");
       return res.status(400).send({ error: "ticketId and updates object are required." });
     }
-    console.log("2. Inputs validated successfully.");
 
-    // --- 3. FETCH ORIGINAL TICKET ---
     const ticketRef = db.ref(`/tickets/${ticketId}`);
     const ticketSnap = await ticketRef.once("value");
     if (!ticketSnap.exists()) {
-      console.error(`-! Error: Ticket ${ticketId} not found in database.`);
       return res.status(404).send({ error: "Ticket not found." });
     }
-    console.log(`3. Successfully fetched original ticket ${ticketId}.`);
 
-
-    // --- 4. DETERMINE UPDATE TYPE (RESCHEDULE OR SIMPLE) ---
+    // --- THIS IS THE CRITICAL LOGIC ---
+    // First, check if a 'reschedule' object exists within the updates.
     if (updates.reschedule) {
-      // --- RESCHEDULING LOGIC ---
-      console.log("4a. Rescheduling logic triggered.");
+      console.log("2a. Rescheduling logic triggered.");
       const { newDate, newSlot, oldDate, oldTechId } = updates.reschedule;
       
-      // Prepare the object for all database changes
-      const updatesForReschedule = {};
-      
-      // 4a-1. Find and prepare to delete the old appointment pointer
-      console.log(`   - Searching for old appointment for Tech ${oldTechId} on ${oldDate}`);
+      // This object will hold all the database changes we need to make
+      const updatesForDatabase = {};
+
+      // --- Step 1: Find and prepare to delete the old appointment pointer ---
       const oldAppointmentPath = `/appointments/${oldDate}/${oldTechId}`;
       const oldAppointmentsSnap = await db.ref(oldAppointmentPath).orderByChild('ticketId').equalTo(ticketId).once('value');
       
       if (oldAppointmentsSnap.exists()) {
         const oldAppointmentKey = Object.keys(oldAppointmentsSnap.val())[0];
-        const fullDeletionPath = `${oldAppointmentPath}/${oldAppointmentKey}`;
-        updatesForReschedule[fullDeletionPath] = null; // Setting to null deletes the data
-        console.log(`   - Found old appointment. Marked for deletion at: ${fullDeletionPath}`);
-      } else {
-        console.log(`   - Warning: Did not find a matching old appointment to delete.`);
+        updatesForDatabase[`${oldAppointmentPath}/${oldAppointmentKey}`] = null; // Setting to null deletes the data
+        console.log(`   - Marked old appointment for deletion.`);
       }
 
-      // 4a-2. Prepare to update the main ticket fields
+      // --- Step 2: Prepare to UPDATE the main ticket fields ---
       const [newStartTime, newEndTime] = newSlot.time.split('-');
-      updatesForReschedule[`/tickets/${ticketId}/appointmentDate`] = newDate;
-      updatesForReschedule[`/tickets/${ticketId}/appointmentTime`] = newSlot.time;
-      updatesForReschedule[`/tickets/${ticketId}/TechId`] = newSlot.techId;
-      updatesForReschedule[`/tickets/${ticketId}/TechName`] = newSlot.techName;
-      console.log("   - Prepared main ticket fields for update.");
+      updatesForDatabase[`/tickets/${ticketId}/appointmentDate`] = newDate;
+      updatesForDatabase[`/tickets/${ticketId}/appointmentTime`] = newSlot.time;
+      updatesForDatabase[`/tickets/${ticketId}/TechId`] = newSlot.techId;
+      updatesForDatabase[`/tickets/${ticketId}/TechName`] = newSlot.techName;
       
-      // 4a-3. Prepare to create the new appointment pointer
+      // --- Step 3: Prepare to CREATE the new appointment pointer ---
       const newAppointmentPointer = { start: newStartTime, end: newEndTime, ticketId };
       const newAppointmentRef = db.ref(`/appointments/${newDate}/${newSlot.techId}`).push();
-      const newPointerPath = `/appointments/${newDate}/${newSlot.techId}/${newAppointmentRef.key}`;
-      updatesForReschedule[newPointerPath] = newAppointmentPointer;
-      console.log(`   - Prepared new appointment pointer for creation at: ${newPointerPath}`);
+      updatesForDatabase[`/appointments/${newDate}/${newSlot.techId}/${newAppointmentRef.key}`] = newAppointmentPointer;
 
-      // 4a-4. Perform all database operations at once
-      console.log("   - Performing atomic update for reschedule...");
-      await db.ref().update(updatesForReschedule);
-      console.log(`5. Reschedule complete for ticket ${ticketId}.`);
+      // --- Step 4: Perform all database operations at once ---
+      await db.ref().update(updatesForDatabase);
+      console.log(`3. Reschedule complete.`);
       return res.status(200).send({ status: "rescheduled", ticketId });
 
     } else {
-      // --- SIMPLE UPDATE LOGIC ---
-      console.log("4b. Simple update logic triggered.");
-      await ticketRef.update(updates);
-      console.log(`5. Simple update complete for ticket ${ticketId}.`);
+      // --- If it's NOT a reschedule, perform a simple update ---
+      console.log("2b. Simple update logic triggered.");
+      await ticketRef.update(updates); // This merges fields like "status"
+      console.log(`3. Simple update complete.`);
       return res.status(200).send({ status: "updated", ticketId });
     }
   } catch (error) {
