@@ -58,48 +58,105 @@ app.post('/api/handler', async (req, res) => {
 // --- TASK LOGIC FUNCTIONS ---
 
 async function handleFindAvailableSlots(req, res) {
-  const { region, skill, appliance, preferred_time_phrase } = req.body;
-  const dateInfo = getDateInfo(preferred_time_phrase);
-  if (!dateInfo) {
-    return res.status(400).send({ error: "Invalid or past date specified. Please provide a future date." });
-  }
-  const { dateString, dayOfWeek, timeWindow } = dateInfo;
-  
-  const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
-  if (!skilledTechsSnap.exists()) return res.status(200).send({ slots: [] });
-  
-  const potentialTechIds = Object.keys(skilledTechsSnap.val());
-  let allAvailableSlots = [];
-  const appointmentsSnap = await db.ref(`/appointments/${dateString}`).once("value");
-  const todaysAppointments = appointmentsSnap.val() || {};
+  console.log("--- Starting findAvailableSlots: Task received ---");
+  const { region, skill, appliance, preferred_time_phrase, custPhone } = req.body;
+  console.log("1. Inputs Received:", { region, skill, appliance, preferred_time_phrase, custPhone });
 
-  for (const techId of potentialTechIds) {
-    const techSnap = await db.ref(`/technicians/${techId}`).once("value");
-    const technician = techSnap.val();
-    if (!technician) continue;
-
-    if (technician.TechRegion === region && technician.appliances_supported.includes(appliance)) {
-      const workingHours = technician.working_hours[dayOfWeek];
-      if (workingHours && workingHours !== "none") {
-        const bookedSlots = todaysAppointments[techId] || [];
-        const freeSlots = calculateFreeSlots(workingHours, bookedSlots);
-        
-        for (const slotTime of freeSlots) {
-          allAvailableSlots.push({ time: slotTime, techId: techId, techName: technician.TechName });
+  // --- EDGE CASE: Check for existing open tickets for this customer ---
+  if (custPhone) {
+    const ticketsRef = db.ref('/tickets');
+    const query = ticketsRef.orderByChild('CustPhone').equalTo(custPhone);
+    const snapshot = await query.once('value');
+    if (snapshot.exists()) {
+      const existingTickets = snapshot.val();
+      for (const ticketId in existingTickets) {
+        const ticket = existingTickets[ticketId];
+        if (ticket.status === 'Booked' || ticket.status === 'In Progress') {
+          console.log(`-! Edge Case Handled: Customer already has an open ticket (${ticketId}).`);
+          return res.status(409).send({ 
+            error: "An open ticket for this customer already exists.",
+            existingTicketId: ticketId 
+          });
         }
       }
     }
   }
 
+  // --- EDGE CASE: Handle invalid or past dates ---
+  const dateInfo = getDateInfo(preferred_time_phrase);
+  if (!dateInfo) {
+    console.log("-! Edge Case Handled: Invalid or past date specified.");
+    return res.status(400).send({ error: "Invalid or past date specified. Please provide a future date." });
+  }
+  const { dateString, dayOfWeek, timeWindow } = dateInfo;
+  console.log("2. Calculated Date Info:", { dateString, dayOfWeek, timeWindow });
+
+  // --- LOGIC: Find technicians by skill ---
+  const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
+  if (!skilledTechsSnap.exists()) {
+    console.log("3. Skill Lookup: No technicians found for this skill in the index. Exiting.");
+    return res.status(200).send({ slots: [] });
+  }
+  const potentialTechIds = Object.keys(skilledTechsSnap.val());
+  console.log("3. Skill Lookup: Found potential technicians:", potentialTechIds);
+  
+  // --- LOGIC: Loop, filter, and calculate slots ---
+  let allAvailableSlots = [];
+  const appointmentsSnap = await db.ref(`/appointments/${dateString}`).once("value");
+  const todaysAppointments = appointmentsSnap.val() || {};
+  console.log(`4. Fetched appointments for ${dateString}:`, todaysAppointments);
+
+  for (const techId of potentialTechIds) {
+    console.log(`\n--- 5. Checking Technician: ${techId} ---`);
+    const techSnap = await db.ref(`/technicians/${techId}`).once("value");
+    const technician = techSnap.val();
+    if (!technician) {
+      console.log(`-! Warning: Could not fetch profile for ${techId}. Skipping.`);
+      continue;
+    }
+
+    console.log(`   - Data: Region='${technician.TechRegion}', Appliances=[${technician.appliances_supported}]`);
+    
+    // Filtering conditions
+    const regionMatch = technician.TechRegion === region;
+    const applianceMatch = Array.isArray(technician.appliances_supported) && technician.appliances_supported.includes(appliance);
+    console.log(`   - Condition Check: regionMatch=${regionMatch}, applianceMatch=${applianceMatch}`);
+
+    if (regionMatch && applianceMatch) {
+      const workingHours = technician.working_hours[dayOfWeek];
+      console.log(`   - Working Hours on ${dayOfWeek}: ${workingHours}`);
+      
+      if (workingHours && workingHours !== "none") {
+        const bookedSlots = todaysAppointments[techId] || [];
+        console.log(`   - Found ${bookedSlots.length} booked slot(s) for this tech.`);
+
+        const freeSlots = calculateFreeSlots(workingHours, bookedSlots);
+        console.log(`   - Calculated ${freeSlots.length} free slot object(s).`);
+        
+        for (const slotTime of freeSlots) {
+          allAvailableSlots.push({ time: slotTime, techId: techId, techName: technician.TechName });
+        }
+      } else {
+        console.log(`   - Result: Technician does not work on ${dayOfWeek}.`);
+      }
+    } else {
+      console.log(`   - Result: Technician failed region or appliance filter.`);
+    }
+  }
+
+  console.log("\n6. All potential slots before time window filter:", allAvailableSlots);
+
+  // --- LOGIC: Final filter based on time phrase (e.g., "afternoon") ---
   const filteredSlots = allAvailableSlots.filter(slot => {
     const slotStart = timeToMinutes(slot.time.split('-')[0]);
     return slotStart >= timeWindow.start && slotStart < timeWindow.end;
   });
+  console.log("7. Final slots after time window filter:", filteredSlots);
 
-  // --- NEW DEBUG LOG ---
-  const finalResponseObject = { slots: filteredSlots.slice(0, 4) };
-  console.log("Type of final response object:", typeof finalResponseObject);
-  // --- END OF DEBUG LOG ---
+  // --- LOGIC: Prepare and send the final response ---
+  const finalResponseObject = { slots: filteredSlots.slice(0, 4) }; // Return up to 4 slots
+  console.log("8. Sending final response to agent:", finalResponseObject);
+  console.log("--- Task Finished ---");
 
   return res.status(200).send(finalResponseObject);
 }
@@ -107,57 +164,88 @@ async function handleFindAvailableSlots(req, res) {
 // Replace your handleCreateTicket function with this improved version
 
 async function handleCreateTicket(req, res) {
+  console.log("--- Starting handleCreateTicket: Task received ---");
   const { dateString, slot, customerInfo, jobInfo } = req.body;
-  console.log(`--- Starting createTicket for Customer: ${customerInfo.phone} ---`);
 
-  // --- NEW: DUPLICATE TICKET CHECK ---
+  // --- 1. RIGOROUS INPUT VALIDATION ---
+  console.log("1. Validating incoming data...");
+  if (!dateString || !slot || !customerInfo || !jobInfo || !slot.techId || !slot.time || !customerInfo.phone) {
+    console.error("-! Validation FAILED: Missing essential data in request body.", req.body);
+    return res.status(400).send({ error: "Missing required booking information." });
+  }
+  if (typeof slot.time !== 'string' || !slot.time.includes('-')) {
+    console.error("-! Validation FAILED: Invalid slot.time format.", slot.time);
+    return res.status(400).send({ error: "Invalid request. The 'slot.time' must be in 'HH:MM-HH:MM' format." });
+  }
+  console.log("   - Validation PASSED.");
+
+  // --- 2. CUSTOMER DUPLICATE TICKET CHECK ---
+  console.log(`2. Checking for existing open tickets for customer ${customerInfo.phone}...`);
   const ticketsRef = db.ref('/tickets');
   const query = ticketsRef.orderByChild('CustPhone').equalTo(customerInfo.phone);
   const snapshot = await query.once('value');
-
   if (snapshot.exists()) {
     const existingTickets = snapshot.val();
     for (const ticketId in existingTickets) {
       const ticket = existingTickets[ticketId];
-      // Check for an open ticket (not Completed or Cancelled) for the same appliance
       if (ticket.appliance === jobInfo.appliance && (ticket.status === 'Booked' || ticket.status === 'In Progress')) {
-        console.log(`Duplicate found: An open ticket (${ticketId}) already exists.`);
-        // Return an error message with the existing ticket ID
-        return res.status(409).send({ 
-          error: "An open ticket for this appliance already exists.",
-          existingTicketId: ticketId 
-        });
+        console.log(`-! Edge Case Handled: Duplicate ticket found (${ticketId}).`);
+        return res.status(409).send({ error: "An open ticket for this appliance already exists.", existingTicketId: ticketId });
       }
     }
   }
-  // --- END OF DUPLICATE CHECK ---
+  console.log("   - No open duplicates found for this customer.");
 
-  console.log("No duplicates found. Proceeding to create a new ticket.");
-  
-  // (The rest of the function is the same as before)
+  // --- 3. TECHNICIAN TIME CONFLICT CHECK ---
+  console.log(`3. Performing final time conflict check for tech ${slot.techId} at ${slot.time} on ${dateString}...`);
+  const appointmentsRef = db.ref(`/appointments/${dateString}/${slot.techId}`);
+  const appointmentSnap = await appointmentsRef.once("value");
+  const existingAppointments = appointmentSnap.val() || {};
+  const [newStartTime] = slot.time.split('-');
+
+  for (const key in existingAppointments) {
+    if (existingAppointments[key].start === newStartTime) {
+      console.log("-! Edge Case Handled: Time slot was booked by another user.");
+      return res.status(409).send({ error: "Sorry, that specific time slot was just booked. Please search for availability again." });
+    }
+  }
+  console.log("   - No time conflicts found. Slot is available.");
+
+  // --- 4. FETCH FRESH DATA FOR CONSISTENCY ---
+  console.log(`4. Fetching latest profile for technician ${slot.techId}...`);
   const techSnap = await db.ref(`/technicians/${slot.techId}`).once("value");
-  if (!techSnap.exists()) return res.status(404).send({ error: "Technician not found." });
+  if (!techSnap.exists()) {
+    console.error(`-! Critical Error: Technician ${slot.techId} not found in database.`);
+    return res.status(404).send({ error: "Technician details could not be found." });
+  }
   const technician = techSnap.val();
+  console.log(`   - Successfully fetched fresh data for ${technician.TechName}.`);
 
+  // --- 5. CREATE AND SAVE TICKET ---
+  console.log("5. Preparing to write ticket and appointment to database...");
   const ticketId = `SR-${Date.now()}`;
   const [startTime, endTime] = slot.time.split('-');
-
+  
   const ticketData = {
     ticketId, status: "Booked", createdAt: new Date().toISOString(),
     CustName: customerInfo.name, CustPhone: customerInfo.phone, CustAddress: customerInfo.address,
-    TechId: slot.techId, TechName: slot.techName, TechPhone: technician.TechPhone,
+    TechId: slot.techId, TechName: technician.TechName, TechPhone: technician.TechPhone,
     appointmentDate: dateString, appointmentTime: slot.time,
     appliance: jobInfo.appliance, description: jobInfo.description
   };
 
   const appointmentPointer = { start: startTime, end: endTime, ticketId };
+
   const updates = {};
   const newAppointmentRef = db.ref(`/appointments/${dateString}/${slot.techId}`).push();
   updates[`/tickets/${ticketId}`] = ticketData;
   updates[`/appointments/${dateString}/${slot.techId}/${newAppointmentRef.key}`] = appointmentPointer;
 
   await db.ref().update(updates);
-  console.log(`Ticket created: ${ticketId}`);
+  console.log(`6. Write successful! Ticket created: ${ticketId}`);
+  console.log("--- Task Finished ---");
+
+  // --- 6. RETURN SUCCESS RESPONSE ---
   return res.status(200).send({ status: "confirmed", ticketId });
 }
 
