@@ -73,7 +73,7 @@ async function handleFindAvailableSlots(req, res) {
         const ticket = existingTickets[ticketId];
         if (ticket.status === 'Booked' || ticket.status === 'In Progress') {
           console.log(`-! Edge Case Handled: Customer already has an open ticket (${ticketId}).`);
-          return res.status(409).send({ 
+          return res.status(200).send({ 
             error: "An open ticket for this customer already exists.",
             existingTicketId: ticketId 
           });
@@ -86,7 +86,7 @@ async function handleFindAvailableSlots(req, res) {
   const dateInfo = getDateInfo(preferred_time_phrase);
   if (!dateInfo) {
     console.log("-! Edge Case Handled: Invalid or past date specified.");
-    return res.status(400).send({ error: "Invalid or past date specified. Please provide a future date." });
+    return res.status(200).send({ error: "Invalid or past date specified. Please provide a future date." });
   }
   const { dateString, dayOfWeek, timeWindow } = dateInfo;
   console.log("2. Calculated Date Info:", { dateString, dayOfWeek, timeWindow });
