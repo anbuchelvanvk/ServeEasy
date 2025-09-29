@@ -64,7 +64,13 @@ app.post('/api/handler', async (req, res) => {
 async function handleFindAvailableSlots(req, res) {
   console.log("--- Starting findAvailableSlots: Task received ---");
   const { region, skill, appliance, preferred_time_phrase, custPhone } = req.body;
-  console.log("1. Inputs Received:", { region, skill, appliance, preferred_time_phrase, custPhone });
+  
+  // --- NEW: Input Normalization ---
+  const normalizedSkill = skill ? skill.toLowerCase() : null;
+  const normalizedAppliance = appliance ? appliance.toUpperCase() : null;
+  const normalizedRegion = region ? region.toLowerCase() : null;
+  console.log("1. Normalized Inputs:", { normalizedRegion, normalizedSkill, normalizedAppliance, preferred_time_phrase, custPhone });
+
 
   // --- EDGE CASE 1: Check for existing open tickets for this customer ---
   if (custPhone) {
@@ -97,9 +103,9 @@ async function handleFindAvailableSlots(req, res) {
   console.log("2. Calculated Date Info:", { dateString, dayOfWeek, timeWindow });
 
   // --- LOGIC: Find technicians by skill ---
-  const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
+  const skilledTechsSnap = await db.ref(`/techniciansBySkill/${normalizedSkill}`).once("value");
   if (!skilledTechsSnap.exists()) {
-    const reason = `No technicians found with the skill '${skill}'.`;
+    const reason = `No technicians found with the skill '${normalizedSkill}'.`;
     console.log("3. Skill Lookup:", reason);
     return res.status(200).send({ slots: [], error: reason });
   }
@@ -116,8 +122,8 @@ async function handleFindAvailableSlots(req, res) {
     const technician = techSnap.val();
     if (!technician) continue;
 
-    const regionMatch = technician.TechRegion === region;
-    const applianceMatch = Array.isArray(technician.appliances_supported) && technician.appliances_supported.includes(appliance);
+    const regionMatch = technician.TechRegion.toLowerCase() === normalizedRegion;
+    const applianceMatch = Array.isArray(technician.appliances_supported) && technician.appliances_supported.includes(normalizedAppliance);
 
     if (regionMatch && applianceMatch) {
       const workingHours = technician.working_hours[dayOfWeek];
@@ -150,6 +156,8 @@ async function handleFindAvailableSlots(req, res) {
   
   return res.status(200).send(finalResponseObject);
 }
+
+
 
 async function handleCreateTicket(req, res) {
   const { dateString, slot, customerInfo, jobInfo } = req.body;
@@ -322,7 +330,6 @@ function calculateFreeSlots(workingHours, bookedSlots) {
     
     // Check for free time *before* the current booking
     while (currentTime + serviceDuration <= bookedStart) {
-      // --- THIS LINE IS FIXED ---
       availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + serviceDuration)}`);
       currentTime += serviceDuration;
     }
@@ -339,44 +346,49 @@ function calculateFreeSlots(workingHours, bookedSlots) {
   return availableSlots;
 }
 
+
 /**
- * Converts "today", "tomorrow", "afternoon", etc., into a specific date,
+ * Converts "today", "tomorrow", "01-10-2025", etc., into a specific date,
  * day of the week, and time window. It is timezone-aware for India (IST).
  */
-function getDateInfo(preferredDay) {
-    const now = new Date();
-    const nowInIST = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-    let targetDate = new Date(nowInIST);
-    if (preferredDay) {
-        const dayLower = preferredDay.toLowerCase();
-        if (dayLower.includes('tomorrow')) {
-            targetDate.setDate(targetDate.getDate() + 1);
-        }
-    }
-    const startOfTodayIST = new Date(nowInIST.setHours(0, 0, 0, 0));
-    if (targetDate < startOfTodayIST) {
-        console.log("Error: Requested date is in the past.");
-        return app.status(200).send({ error: "Requested date is in the past." }); 
-    }
-    const timeWindows = {
-        morning: { start: 9 * 60, end: 12 * 60 },
-        afternoon: { start: 12 * 60, end: 17 * 60 },
-        evening: { start: 17 * 60, end: 21 * 60 }
-    };
-    let timeWindow = { start: 0, end: 24 * 60 };
-    const phraseLower = (preferredDay || "").toLowerCase();
-    if (phraseLower.includes('morning')) timeWindow = timeWindows.morning;
-    if (phraseLower.includes('afternoon')) timeWindow = timeWindows.afternoon;
-    if (phraseLower.includes('evening')) timeWindow = timeWindows.evening;
-    const year = targetDate.getUTCFullYear();
-    const month = (targetDate.getUTCMonth() + 1).toString().padStart(2, '0');
-    const day = targetDate.getUTCDate().toString().padStart(2, '0');
-    return {
-        dateString: `${year}-${month}-${day}`,
-        dayOfWeek: dayNames[targetDate.getUTCDay()],
-        timeWindow: timeWindow
-    };
+function getDateInfo(phrase) {
+  // Use chrono-node to parse the natural language phrase
+  const referenceDate = new Date();
+  const parsedResult = chrono.parse(phrase, referenceDate, { forwardDate: true });
+
+  if (!parsedResult || parsedResult.length === 0) {
+      console.log("Error: Could not understand the date phrase:", phrase);
+      return null; // Couldn't understand phrase
+  }
+
+  const targetDate = parsedResult[0].start.date();
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (targetDate < startOfToday) {
+      console.log("Error: Requested date is in the past.");
+      return null;
+  }
+    
+  const timeWindows = {
+      morning: { start: 9 * 60, end: 12 * 60 },
+      afternoon: { start: 12 * 60, end: 17 * 60 },
+      evening: { start: 17 * 60, end: 21 * 60 }
+  };
+
+  let timeWindow = { start: 0, end: 24 * 60 }; // Default to full day
+  const phraseLower = (phrase || "").toLowerCase();
+  if (phraseLower.includes('morning')) timeWindow = timeWindows.morning;
+  if (phraseLower.includes('afternoon')) timeWindow = timeWindows.afternoon;
+  if (phraseLower.includes('evening')) timeWindow = timeWindows.evening;
+    
+  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    
+  return {
+      dateString: `${targetDate.getFullYear()}-${(targetDate.getMonth() + 1).toString().padStart(2, '0')}-${targetDate.getDate().toString().padStart(2, '0')}`,
+      dayOfWeek: dayNames[targetDate.getDay()],
+      timeWindow: timeWindow
+  };
 }
 
 
@@ -388,45 +400,15 @@ function timeToMinutes(time) {
   return hours * 60 + minutes;
 }
 
+/**
+ * Utility to convert total minutes from midnight back into a time string "HH:MM".
+ */
 function minutesToTime(minutes) {
   const h = Math.floor(minutes / 60).toString().padStart(2, '0');
   const m = (minutes % 60).toString().padStart(2, '0');
   return `${h}:${m}`;
 }
 
-// --- HELPER FUNCTIONS ---
-
-function getDateInfo(phrase) {
-  const referenceDate = new Date(); // Use server's current time
-  const parsedResult = chrono.parse(phrase, referenceDate, { forwardDate: true });
-
-  if (!parsedResult || parsedResult.length === 0) return null; // Couldn't understand phrase
-
-  const targetDate = parsedResult[0].start.date();
-  
-  // Define time windows
-  const timeWindows = {
-    morning: { start: 9 * 60, end: 12 * 60 },   // 9 AM - 12 PM
-    afternoon: { start: 12 * 60, end: 17 * 60 }, // 12 PM - 5 PM
-    evening: { start: 17 * 60, end: 21 * 60 }    // 5 PM - 9 PM
-  };
-  
-  let timeWindow = { start: 0, end: 24 * 60 }; // Default to full day
-  const phraseLower = phrase.toLowerCase();
-  if (phraseLower.includes('morning')) timeWindow = timeWindows.morning;
-  if (phraseLower.includes('afternoon')) timeWindow = timeWindows.afternoon;
-  if (phraseLower.includes('evening')) timeWindow = timeWindows.evening;
-
-  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  
-  return {
-      dateString: `${targetDate.getFullYear()}-${(targetDate.getMonth() + 1).toString().padStart(2, '0')}-${targetDate.getDate().toString().padStart(2, '0')}`,
-      dayOfWeek: dayNames[targetDate.getDay()],
-      timeWindow: timeWindow
-  };
-}
-
-// ... other helpers like calculateFreeSlots, timeToMinutes, etc. ...
 
 
 // --- START THE SERVER ---
