@@ -81,11 +81,11 @@ async function handleFindAvailableSlots(req, res) {
       const existingTickets = snapshot.val();
       for (const ticketId in existingTickets) {
         const ticket = existingTickets[ticketId];
-        if (ticket.status === 'Booked' || ticket.status === 'In Progress') {
+        if (ticket.status === 'Booked' || ticket.status === 'In Progress' || ticket.appliance === normalizedAppliance) {
           console.log(`-! Edge Case Handled: Customer already has an open ticket (${ticketId}).`);
           return res.status(200).send({ 
             slots: [],
-            error: "An open ticket for this customer already exists.",
+            error: "An open ticket for you with this Appliance already exists.",
             existingTicketId: ticketId 
           });
         }
