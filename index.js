@@ -48,11 +48,11 @@ app.post('/api/handler', async (req, res) => {
         return await handleGetRegionByKey(req, res);
 
       default:
-        return res.status(400).send({ error: "Invalid task specified" });
+        return res.status(200).send({ error: "Invalid task specified" });
     }
   } catch (error) {
     console.error(`Error processing task "${task}":`, error);
-    return res.status(500).send({ error: "An internal server error occurred." });
+    return res.status(200).send({ error: "An internal server error occurred." });
   }
 });
 
@@ -65,17 +65,18 @@ async function handleFindAvailableSlots(req, res) {
   console.log("--- Starting findAvailableSlots: Task received ---");
   const { region, skill, appliance, preferred_time_phrase, custPhone } = req.body;
   
-  // (The first part of the function is the same...)
+  
   if (custPhone) {
     // ... duplicate ticket check logic
   }
   const dateInfo = getDateInfo(preferred_time_phrase);
   if (!dateInfo) {
-    return res.status(400).send({ error: "Invalid or past date specified. Please provide a future date." });
+    return res.status(200).send({ error: "Invalid or past date specified. Please provide a future date." });
   }
   const { dateString, dayOfWeek, timeWindow } = dateInfo;
 
   const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
+  console.log(skilledTechsSnap.val());
   if (!skilledTechsSnap.exists()) return res.status(200).send({ slots: [] });
   
   const potentialTechIds = Object.keys(skilledTechsSnap.val());
@@ -119,10 +120,6 @@ async function handleFindAvailableSlots(req, res) {
   const finalResponseObject = { slots: filteredSlots.slice(0, 4) };
   return res.status(200).send(finalResponseObject);
 }
-
-// Replace your handleCreateTicket function with this improved version
-
-// Replace your old handleCreateTicket function with this one
 
 async function handleCreateTicket(req, res) {
   const { dateString, slot, customerInfo, jobInfo } = req.body;
@@ -177,7 +174,6 @@ async function handleCreateTicket(req, res) {
   return res.status(200).send({ status: "confirmed", ticketId });
 }
 
-// Replace your old handleUpdateTicket function with this one
 
 async function handleUpdateTicket(req, res) {
   const { ticketId, updates } = req.body;
@@ -186,13 +182,13 @@ async function handleUpdateTicket(req, res) {
 
   try {
     if (!ticketId || !updates) {
-      return res.status(400).send({ error: "ticketId and updates object are required." });
+      return res.status(200).send({ error: "ticketId and updates object are required." });
     }
 
     const ticketRef = db.ref(`/tickets/${ticketId}`);
     const ticketSnap = await ticketRef.once("value");
     if (!ticketSnap.exists()) {
-      return res.status(404).send({ error: "Ticket not found." });
+      return res.status(200).send({ error: "Ticket not found." });
     }
 
     if (updates.reschedule) {
@@ -240,7 +236,7 @@ async function handleUpdateTicket(req, res) {
     }
   } catch (error) {
     console.error(`-! CRITICAL ERROR during update for ticket ${ticketId}:`, error);
-    return res.status(500).send({ error: "An internal server error occurred during the update." });
+    return res.status(200).send({ error: "An internal server error occurred during the update." });
   }
 }
 
@@ -249,7 +245,7 @@ async function handleGetTicket(req, res) {
     const { ticketId } = req.body;
     console.log(`Fetching ticket: ${ticketId}`);
     const ticketSnap = await db.ref(`/tickets/${ticketId}`).once("value");
-    if (!ticketSnap.exists()) return res.status(404).send({ error: "Ticket not found." });
+    if (!ticketSnap.exists()) return res.status(200).send({ error: "Ticket not found." });
     return res.status(200).send({ ticket: ticketSnap.val() });
 }
 
