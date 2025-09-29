@@ -96,7 +96,6 @@ async function handleFindAvailableSlots(req, res) {
         const techAppointmentsObject = todaysAppointments[techId] || {};
         // Convert the object of appointments into an array of appointments
         const bookedSlots = Object.values(techAppointmentsObject); 
-        // --- END OF CHANGE ---
 
         console.log(`   - Found ${bookedSlots.length} booked slot(s) for this tech.`);
         
@@ -278,29 +277,37 @@ async function handleCancelTicket(req, res) {
  * The "ruler" algorithm. Takes working hours (e.g., "09:00-18:00") and a list of
  * booked slots (e.g., [{start: "11:00", end: "12:30"}]) and returns available 2-hour slots.
  */
+// Replace your old calculateFreeSlots function with this corrected one
+
 function calculateFreeSlots(workingHours, bookedSlots) {
   const [workStart, workEnd] = workingHours.split('-').map(timeToMinutes);
-  const serviceDuration = 120; // 2 hours
+  const serviceDuration = 120; // 2 hours in minutes
   let availableSlots = [];
   let currentTime = workStart;
 
+  // Sort booked slots by start time to process them in order
   bookedSlots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
 
   for (const booked of bookedSlots) {
     const bookedStart = timeToMinutes(booked.start);
     const bookedEnd = timeToMinutes(booked.end);
     
+    // Check for free time *before* the current booking
     while (currentTime + serviceDuration <= bookedStart) {
+      // --- THIS LINE IS FIXED ---
       availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + serviceDuration)}`);
       currentTime += serviceDuration;
     }
+    // Move current time past this booking
     currentTime = Math.max(currentTime, bookedEnd);
   }
 
+  // Check for free time *after* the last booking until the end of the day
   while (currentTime + serviceDuration <= workEnd) {
     availableSlots.push(`${minutesToTime(currentTime)}-${minutesToTime(currentTime + serviceDuration)}`);
     currentTime += serviceDuration;
   }
+
   return availableSlots;
 }
 
