@@ -64,22 +64,49 @@ app.post('/api/handler', async (req, res) => {
 async function handleFindAvailableSlots(req, res) {
   console.log("--- Starting findAvailableSlots: Task received ---");
   const { region, skill, appliance, preferred_time_phrase, custPhone } = req.body;
-  
-  
+  console.log("1. Inputs Received:", { region, skill, appliance, preferred_time_phrase, custPhone });
+
+  // --- EDGE CASE 1: Check for existing open tickets for this customer ---
   if (custPhone) {
-    // ... duplicate ticket check logic
+    const ticketsRef = db.ref('/tickets');
+    const query = ticketsRef.orderByChild('CustPhone').equalTo(custPhone);
+    const snapshot = await query.once('value');
+    if (snapshot.exists()) {
+      const existingTickets = snapshot.val();
+      for (const ticketId in existingTickets) {
+        const ticket = existingTickets[ticketId];
+        if (ticket.status === 'Booked' || ticket.status === 'In Progress') {
+          console.log(`-! Edge Case Handled: Customer already has an open ticket (${ticketId}).`);
+          return res.status(200).send({ 
+            slots: [],
+            error: "An open ticket for this customer already exists.",
+            existingTicketId: ticketId 
+          });
+        }
+      }
+    }
   }
+
+  // --- EDGE CASE 2: Handle invalid or past dates ---
   const dateInfo = getDateInfo(preferred_time_phrase);
   if (!dateInfo) {
-    return res.status(200).send({ error: "Invalid or past date specified. Please provide a future date." });
+    console.log("-! Edge Case Handled: Invalid or past date specified.");
+    return res.status(200).send({ slots: [], error: "Invalid or past date specified. Please provide a future date." });
   }
   const { dateString, dayOfWeek, timeWindow } = dateInfo;
+  console.log("2. Calculated Date Info:", { dateString, dayOfWeek, timeWindow });
 
+  // --- LOGIC: Find technicians by skill ---
   const skilledTechsSnap = await db.ref(`/techniciansBySkill/${skill}`).once("value");
-  console.log(skilledTechsSnap.val());
-  if (!skilledTechsSnap.exists()) return res.status(200).send({ slots: [] });
-  
+  if (!skilledTechsSnap.exists()) {
+    const reason = `No technicians found with the skill '${skill}'.`;
+    console.log("3. Skill Lookup:", reason);
+    return res.status(200).send({ slots: [], error: reason });
+  }
   const potentialTechIds = Object.keys(skilledTechsSnap.val());
+  console.log("3. Skill Lookup: Found potential technicians:", potentialTechIds);
+  
+  // --- LOGIC: Loop, filter, and calculate slots ---
   let allAvailableSlots = [];
   const appointmentsSnap = await db.ref(`/appointments/${dateString}`).once("value");
   const todaysAppointments = appointmentsSnap.val() || {};
@@ -89,22 +116,15 @@ async function handleFindAvailableSlots(req, res) {
     const technician = techSnap.val();
     if (!technician) continue;
 
-    if (technician.TechRegion === region && technician.appliances_supported.includes(appliance)) {
-      const workingHours = technician.working_hours[dayOfWeek];
-      
-      if (workingHours && workingHours !== "none") {
-        
-        // --- THIS IS THE KEY CHANGE ---
-        // Get the appointments for this tech (it's an object)
-        const techAppointmentsObject = todaysAppointments[techId] || {};
-        // Convert the object of appointments into an array of appointments
-        const bookedSlots = Object.values(techAppointmentsObject); 
+    const regionMatch = technician.TechRegion === region;
+    const applianceMatch = Array.isArray(technician.appliances_supported) && technician.appliances_supported.includes(appliance);
 
-        console.log(`   - Found ${bookedSlots.length} booked slot(s) for this tech.`);
-        
+    if (regionMatch && applianceMatch) {
+      const workingHours = technician.working_hours[dayOfWeek];
+      if (workingHours && workingHours !== "none") {
+        const techAppointmentsObject = todaysAppointments[techId] || {};
+        const bookedSlots = Object.values(techAppointmentsObject);
         const freeSlots = calculateFreeSlots(workingHours, bookedSlots);
-        console.log(`   - Calculated ${freeSlots.length} free slot object(s).`);
-        
         for (const slotTime of freeSlots) {
           allAvailableSlots.push({ time: slotTime, techId: techId, techName: technician.TechName });
         }
@@ -112,12 +132,22 @@ async function handleFindAvailableSlots(req, res) {
     }
   }
 
+  // --- LOGIC: Final filter based on time phrase ---
   const filteredSlots = allAvailableSlots.filter(slot => {
     const slotStart = timeToMinutes(slot.time.split('-')[0]);
     return slotStart >= timeWindow.start && slotStart < timeWindow.end;
   });
+  
+  // --- LOGIC: Prepare and send the final response ---
+  if (filteredSlots.length === 0) {
+      const reason = "No available appointments were found for the requested skill, region, and time frame.";
+      console.log("4. Final Result:", reason);
+      return res.status(200).send({ slots: [], error: reason });
+  }
 
   const finalResponseObject = { slots: filteredSlots.slice(0, 4) };
+  console.log("4. Final Result: Sending available slots to agent:", finalResponseObject);
+  
   return res.status(200).send(finalResponseObject);
 }
 
@@ -327,7 +357,7 @@ function getDateInfo(preferredDay) {
     const startOfTodayIST = new Date(nowInIST.setHours(0, 0, 0, 0));
     if (targetDate < startOfTodayIST) {
         console.log("Error: Requested date is in the past.");
-        return null; 
+        return app.status(200).send({ error: "Requested date is in the past." }); 
     }
     const timeWindows = {
         morning: { start: 9 * 60, end: 12 * 60 },
