@@ -352,16 +352,30 @@ function calculateFreeSlots(workingHours, bookedSlots) {
  * day of the week, and time window. It is timezone-aware for India (IST).
  */
 function getDateInfo(phrase) {
-  // Use chrono-node to parse the natural language phrase
   const referenceDate = new Date();
-  const parsedResult = chrono.parse(phrase, referenceDate, { forwardDate: true });
+  let targetDate;
 
-  if (!parsedResult || parsedResult.length === 0) {
-      console.log("Error: Could not understand the date phrase:", phrase);
-      return null; // Couldn't understand phrase
+  // --- NEW: Handle DD-MM-YYYY format specifically ---
+  const dmyRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
+  const match = phrase.match(dmyRegex);
+
+  if (match) {
+    // If format matches, parse it manually to avoid ambiguity
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // Month is 0-indexed in JS
+    const year = parseInt(match[3], 10);
+    targetDate = new Date(year, month, day);
+  } else {
+    // Otherwise, use chrono-node for natural language like "tomorrow"
+    const parsedResult = chrono.parse(phrase, referenceDate, { forwardDate: true });
+    if (!parsedResult || parsedResult.length === 0) {
+        console.log("Error: Could not understand the date phrase:", phrase);
+        return null;
+    }
+    targetDate = parsedResult[0].start.date();
   }
+  // --- END OF CHANGE ---
 
-  const targetDate = parsedResult[0].start.date();
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
