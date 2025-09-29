@@ -2,6 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const chrono = require('chrono-node');
 
+
 // --- INITIALIZATION ---
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -17,6 +18,7 @@ const db = admin.database();
 const app = express();
 app.use(express.json());
 
+app.use(express.static('public'));
 
 // --- MAIN HANDLER / ROUTER ---
 app.post('/api/handler', async (req, res) => {
