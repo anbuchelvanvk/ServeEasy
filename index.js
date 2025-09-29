@@ -72,27 +72,6 @@ async function handleFindAvailableSlots(req, res) {
   console.log("1. Normalized Inputs:", { normalizedRegion, normalizedSkill, normalizedAppliance, preferred_time_phrase, custPhone });
 
 
-  // --- EDGE CASE 1: Check for existing open tickets for this customer ---
-  if (custPhone) {
-    const ticketsRef = db.ref('/tickets');
-    const query = ticketsRef.orderByChild('CustPhone').equalTo(custPhone);
-    const snapshot = await query.once('value');
-    if (snapshot.exists()) {
-      const existingTickets = snapshot.val();
-      for (const ticketId in existingTickets) {
-        const ticket = existingTickets[ticketId];
-        if (ticket.appliance === normalizedAppliance) {
-          console.log(`-! Edge Case Handled: Customer already has an open ticket (${ticketId}).`);
-          return res.status(200).send({ 
-            slots: [],
-            error: "An open ticket for you with this Appliance already exists.",
-            existingTicketId: ticketId 
-          });
-        }
-      }
-    }
-  }
-
   // --- EDGE CASE 2: Handle invalid or past dates ---
   const dateInfo = getDateInfo(preferred_time_phrase);
   if (!dateInfo) {
