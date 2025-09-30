@@ -20,6 +20,12 @@ app.use(express.json());
 
 app.use(express.static('public'));
 
+// --- NEW ROUTE FOR CLEAN URL ---
+// This tells the server to show the portal file when someone visits /TechnicianPortal
+app.get('/TechnicianPortal', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'technician_portal.html'));
+});
+
 // --- MAIN HANDLER / ROUTER ---
 app.post('/api/handler', async (req, res) => {
   const task = req.body.task;

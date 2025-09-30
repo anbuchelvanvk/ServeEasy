@@ -65,7 +65,7 @@
         import { getDatabase, ref, onValue, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
 
         // --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
-       const firebaseConfig = {
+        const firebaseConfig = {
             apiKey: "AIzaSyCbLaEIatyVszr6gw81Dw79W2lCMS06vcM",
             authDomain: "serveeasy-8565e.firebaseapp.com",
             databaseURL: "https://serveeasy-8565e-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -89,8 +89,11 @@
 
         onAuthStateChanged(auth, user => {
             if (user) {
-                // IMPORTANT: The technician's UID from Auth MUST match their TechID in the database
-                currentTechId = user.uid; 
+                // --- THIS IS THE KEY CHANGE ---
+                // Get the TechID from the part of the email before the "@"
+                currentTechId = user.email.split('@')[0];
+                // --- END OF CHANGE ---
+
                 loginContainer.style.display = 'none';
                 portalContainer.style.display = 'block';
                 loadAssignedTickets(currentTechId);
@@ -201,3 +204,4 @@
     </script>
 </body>
 </html>
+
