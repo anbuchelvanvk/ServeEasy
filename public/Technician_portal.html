@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServeEasy Technician Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full font-sans">
+
+    <!-- Login Screen -->
+    <div id="login-container" class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
+        <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+            <h2 class="mt-10 text-center text-3xl font-bold leading-9 tracking-tight text-gray-900">ServeEasy</h2>
+            <p class="text-center text-sm text-gray-600">Technician Portal</p>
+        </div>
+        <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+            <div class="space-y-6 bg-white p-8 shadow-lg rounded-lg">
+                <div>
+                    <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Technician Email</label>
+                    <div class="mt-2">
+                        <input id="email" type="email" autocomplete="email" required class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3">
+                    </div>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Password</label>
+                    <div class="mt-2">
+                        <input id="password" type="password" autocomplete="current-password" required class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3">
+                    </div>
+                </div>
+                <div id="login-error" class="text-sm text-red-600 font-medium"></div>
+                <div>
+                    <button id="login-btn" class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500">Sign in</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Portal Screen -->
+    <div id="portal-container" class="hidden container mx-auto p-4 md:p-6">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">My Assigned Jobs</h1>
+                <p id="tech-welcome" class="text-gray-600"></p>
+            </div>
+            <button id="logout-btn" class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Logout</button>
+        </div>
+
+        <div id="tickets-list" class="space-y-4">
+            <p class="text-gray-500">Loading your assigned tickets...</p>
+        </div>
+    </div>
+
+    <!-- Ticket Details Modal -->
+    <div id="ticket-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center p-4">
+         <div id="ticket-modal-content" class="relative p-8 bg-white w-full max-w-lg rounded-lg shadow-xl">
+            <!-- Content will be injected by JavaScript -->
+         </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
+        import { getDatabase, ref, onValue, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+
+        // --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
+       const firebaseConfig = {
+            apiKey: "AIzaSyCbLaEIatyVszr6gw81Dw79W2lCMS06vcM",
+            authDomain: "serveeasy-8565e.firebaseapp.com",
+            databaseURL: "https://serveeasy-8565e-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "serveeasy-8565e",
+            storageBucket: "serveeasy-8565e.firebasestorage.app",
+            messagingSenderId: "878377272893",
+            appId: "1:878377272893:web:fcdc529602bcd142fe4c54",
+            measurementId: "G-PB9GKG5T8L"
+        };
+        // ---------------------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        const loginContainer = document.getElementById('login-container');
+        const portalContainer = document.getElementById('portal-container');
+        const ticketModal = document.getElementById('ticket-modal');
+
+        let currentTechId = null;
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                // IMPORTANT: The technician's UID from Auth MUST match their TechID in the database
+                currentTechId = user.uid; 
+                loginContainer.style.display = 'none';
+                portalContainer.style.display = 'block';
+                loadAssignedTickets(currentTechId);
+            } else {
+                currentTechId = null;
+                loginContainer.style.display = 'flex';
+                portalContainer.style.display = 'none';
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .catch(err => document.getElementById('login-error').textContent = "Invalid email or password.");
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+        
+        function loadAssignedTickets(techId) {
+            const techRef = ref(db, `technicians/${techId}`);
+            onValue(techRef, (snapshot) => {
+                const techData = snapshot.val();
+                if (techData) {
+                     document.getElementById('tech-welcome').textContent = `Welcome, ${techData.TechName}!`;
+                }
+            });
+
+            const ticketsRef = ref(db, 'tickets');
+            const assignedTicketsQuery = query(ticketsRef, orderByChild('TechId'), equalTo(techId));
+            
+            onValue(assignedTicketsQuery, snapshot => {
+                const ticketsList = document.getElementById('tickets-list');
+                ticketsList.innerHTML = '';
+                const tickets = snapshot.val() || {};
+                
+                if (Object.keys(tickets).length === 0) {
+                     ticketsList.innerHTML = `<p class="text-gray-500">You have no assigned jobs.</p>`;
+                     return;
+                }
+
+                Object.values(tickets).filter(t => t.status !== 'Completed' && t.status !== 'Cancelled').forEach(ticket => {
+                    const ticketDiv = document.createElement('div');
+                    ticketDiv.className = 'p-4 border rounded-lg bg-white hover:bg-gray-50 cursor-pointer transition-colors shadow-sm';
+                    ticketDiv.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-lg text-gray-800">${ticket.appliance} - ${ticket.CustName}</h3>
+                            <span class="text-sm font-medium text-gray-500">${ticket.appointmentDate} at ${ticket.appointmentTime}</span>
+                        </div>
+                        <p class="text-gray-600 mt-1">${ticket.CustAddress}</p>
+                        <div class="mt-3">
+                             <span class="text-xs font-semibold inline-block py-1 px-3 uppercase rounded-full text-indigo-600 bg-indigo-200">
+                                ${ticket.status || 'Booked'}
+                            </span>
+                        </div>
+                    `;
+                    ticketDiv.addEventListener('click', () => showTicketDetails(ticket.ticketId));
+                    ticketsList.appendChild(ticketDiv);
+                });
+            });
+        }
+        
+        function showTicketDetails(ticketId) {
+            const ticketRef = ref(db, `/tickets/${ticketId}`);
+            onValue(ticketRef, (snapshot) => {
+                const ticket = snapshot.val();
+                if (ticket) {
+                    const content = `
+                        <div class="flex justify-between items-start">
+                             <h3 class="text-2xl font-bold text-gray-900">${ticket.ticketId}</h3>
+                             <button id="close-ticket-modal" class="text-2xl font-bold">&times;</button>
+                        </div>
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                            <div><strong>Customer:</strong><br>${ticket.CustName}</div>
+                            <div><strong>Phone:</strong><br><a href="tel:${ticket.CustPhone}" class="text-indigo-600">${ticket.CustPhone}</a></div>
+                            <div class="col-span-1 md:col-span-2"><strong>Address:</strong><br>${ticket.CustAddress}</div>
+                            <div><strong>Appliance:</strong><br>${ticket.appliance}</div>
+                            <div><strong>Request Type:</strong><br>${ticket.requestType}</div>
+                            <div class="col-span-1 md:col-span-2"><strong>Problem:</strong><br>${ticket.description}</div>
+                        </div>
+                        <div class="mt-6">
+                            <label for="status-select" class="block font-medium text-gray-700">Update Job Status:</label>
+                            <div class="flex items-center mt-2">
+                                <select id="status-select" class="block w-full rounded-md border-gray-300 shadow-sm p-2 ring-1 ring-inset ring-gray-300">
+                                    <option ${ticket.status === 'Booked' ? 'selected' : ''}>Booked</option>
+                                    <option ${ticket.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                    <option ${ticket.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                </select>
+                                <button id="update-status-btn" class="ml-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Update</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('ticket-modal-content').innerHTML = content;
+                    ticketModal.classList.remove('hidden');
+
+                    document.getElementById('close-ticket-modal').addEventListener('click', () => ticketModal.classList.add('hidden'));
+                    document.getElementById('update-status-btn').addEventListener('click', () => {
+                        const newStatus = document.getElementById('status-select').value;
+                        const updates = {};
+                        updates[`/tickets/${ticketId}/status`] = newStatus;
+                        update(ref(db), updates).then(() => {
+                            ticketModal.classList.add('hidden');
+                        });
+                    });
+                }
+            }, { onlyOnce: true });
+        }
+    </script>
+</body>
+</html>

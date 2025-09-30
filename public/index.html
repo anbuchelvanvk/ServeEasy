@@ -1,95 +1,111 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en" class="h-full bg-gray-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ServeEasy Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="h-full">
+<body class="h-full font-sans">
 
     <!-- Login Screen -->
     <div id="login-container" class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-            <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">ServeEasy Admin Dashboard</h2>
+            <h2 class="mt-10 text-center text-3xl font-bold leading-9 tracking-tight text-gray-900">ServeEasy</h2>
+            <p class="text-center text-sm text-gray-600">Admin Dashboard Login</p>
         </div>
         <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-            <div class="space-y-6">
+            <div class="space-y-6 bg-white p-8 shadow-lg rounded-lg">
                 <div>
                     <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Email address</label>
                     <div class="mt-2">
-                        <input id="email" type="email" autocomplete="email" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 p-2">
+                        <input id="email" type="email" autocomplete="email" required class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3">
                     </div>
                 </div>
                 <div>
                     <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Password</label>
                     <div class="mt-2">
-                        <input id="password" type="password" autocomplete="current-password" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 p-2">
+                        <input id="password" type="password" autocomplete="current-password" required class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3">
                     </div>
                 </div>
-                <div id="login-error" class="text-sm text-red-600"></div>
+                <div id="login-error" class="text-sm text-red-600 font-medium"></div>
                 <div>
-                    <button id="login-btn" class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Sign in</button>
+                    <button id="login-btn" class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Sign in</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Main Dashboard Screen -->
-    <div id="dashboard-container" class="hidden container mx-auto p-4">
+    <div id="dashboard-container" class="hidden container mx-auto p-4 md:p-6 lg:p-8">
         <div class="flex justify-between items-center mb-6 border-b pb-4">
-            <h1 class="text-3xl font-bold text-gray-800">ServeEasy Dashboard</h1>
-            <button id="logout-btn" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Logout</button>
+            <h1 class="text-4xl font-bold text-gray-800">ServeEasy Dashboard</h1>
+            <button id="logout-btn" class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Logout</button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Live Tickets Column -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
-                <h2 class="text-xl font-semibold mb-4">Live Tickets</h2>
-                <div id="tickets-list" class="space-y-4">
-                    <!-- Tickets will be rendered here in real-time -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Column: Tickets -->
+            <div class="lg:col-span-3">
+                 <h2 class="text-2xl font-semibold mb-4 text-gray-700">Live Tickets</h2>
+                 <div id="tickets-list" class="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
                     <p class="text-gray-500">Listening for new tickets...</p>
-                </div>
+                 </div>
             </div>
-            <!-- Technicians Column -->
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold">Technicians</h2>
-                    <button id="add-tech-btn" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Add New</button>
+            <!-- Right Column: Technicians & Schedule -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Technicians Section -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-semibold text-gray-700">Technicians</h2>
+                        <button id="add-tech-btn" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Add New</button>
+                    </div>
+                    <div id="technicians-list" class="space-y-3 max-h-60 overflow-y-auto pr-2">
+                        <!-- Technicians will be rendered here -->
+                    </div>
                 </div>
-                <div id="technicians-list" class="space-y-2">
-                    <!-- Technicians will be rendered here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Technician Modal -->
-    <div id="tech-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-        <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Add New Technician</h3>
-                <div class="mt-2 px-7 py-3 space-y-4 text-left">
-                    <input id="tech-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Technician ID (e.g., tech_10)">
-                    <input id="tech-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Full Name">
-                    <input id="tech-phone" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Phone Number">
-                    <input id="tech-region" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Region (e.g., Chennai)">
-                    <input id="tech-skills" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Skills (comma-separated, e.g., ac_cooling,ac_leak)">
-                    <input id="tech-appliances" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Appliances (comma-separated, e.g., AC,TV)">
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button id="cancel-tech-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md mr-2">Cancel</button>
-                    <button id="save-tech-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Save Technician</button>
+                <!-- Appointments Section -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-700">Today's Schedule</h2>
+                    <div id="appointments-list" class="space-y-3">
+                        <p class="text-gray-500">No appointments booked for today yet.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modals -->
+    <!-- Add/Edit Technician Modal -->
+    <div id="tech-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center">
+        <div class="relative p-8 bg-white w-full max-w-lg rounded-lg shadow-xl">
+             <h3 class="text-2xl leading-6 font-bold text-gray-900 mb-6">Add New Technician</h3>
+             <div class="space-y-4 text-left">
+                <input id="tech-id" class="block w-full rounded-md border-gray-300 shadow-sm p-3 ring-1 ring-inset ring-gray-300" placeholder="Technician ID (e.g., tech_10)">
+                <input id="tech-name" class="block w-full rounded-md border-gray-300 shadow-sm p-3 ring-1 ring-inset ring-gray-300" placeholder="Full Name">
+                <input id="tech-phone" class="block w-full rounded-md border-gray-300 shadow-sm p-3 ring-1 ring-inset ring-gray-300" placeholder="Phone Number">
+                <input id="tech-region" class="block w-full rounded-md border-gray-300 shadow-sm p-3 ring-1 ring-inset ring-gray-300" placeholder="Region (e.g., Chennai)">
+                <input id="tech-skills" class="block w-full rounded-md border-gray-300 shadow-sm p-3 ring-1 ring-inset ring-gray-300" placeholder="Skills (comma-separated, e.g., ac_cooling,ac_leak)">
+                <input id="tech-appliances" class="block w-full rounded-md border-gray-300 shadow-sm p-3 ring-1 ring-inset ring-gray-300" placeholder="Appliances (comma-separated, e.g., AC,TV)">
+             </div>
+             <div class="mt-6 flex justify-end space-x-4">
+                <button id="cancel-tech-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-md font-semibold">Cancel</button>
+                <button id="save-tech-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md font-semibold">Save Technician</button>
+             </div>
+        </div>
+    </div>
 
+    <!-- Ticket Details Modal -->
+    <div id="ticket-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center">
+         <div id="ticket-modal-content" class="relative p-8 bg-white w-full max-w-2xl rounded-lg shadow-xl">
+            <!-- Content will be injected by JavaScript -->
+         </div>
+    </div>
+
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
-        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+        import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
 
         // --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
         const firebaseConfig = {
@@ -108,9 +124,13 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
+        // --- UI ELEMENT SELECTORS ---
         const loginContainer = document.getElementById('login-container');
         const dashboardContainer = document.getElementById('dashboard-container');
+        const techModal = document.getElementById('tech-modal');
+        const ticketModal = document.getElementById('ticket-modal');
 
+        // --- AUTHENTICATION LOGIC ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 loginContainer.style.display = 'none';
@@ -126,12 +146,14 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             signInWithEmailAndPassword(auth, email, password)
-                .catch(err => document.getElementById('login-error').textContent = err.message);
+                .catch(err => document.getElementById('login-error').textContent = "Invalid email or password.");
         });
 
         document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
         
+        // --- REAL-TIME DATA LOADING ---
         function loadRealtimeData() {
+            // Tickets Listener
             const ticketsRef = ref(db, 'tickets');
             onValue(ticketsRef, snapshot => {
                 const ticketsList = document.getElementById('tickets-list');
@@ -139,82 +161,169 @@
                 const tickets = snapshot.val() || {};
                 Object.values(tickets).reverse().forEach(ticket => {
                     const ticketDiv = document.createElement('div');
-                    ticketDiv.className = 'p-4 border rounded-lg';
+                    ticketDiv.className = 'p-4 border rounded-lg bg-gray-50 hover:bg-indigo-50 cursor-pointer transition-colors';
                     ticketDiv.innerHTML = `
                         <div class="flex justify-between items-center">
-                            <h3 class="font-bold text-lg">${ticket.appliance} - ${ticket.CustName}</h3>
-                            <span class="text-sm text-gray-500">${ticket.appointmentDate}</span>
+                            <h3 class="font-bold text-lg text-gray-800">${ticket.appliance} - ${ticket.CustName}</h3>
+                            <span class="text-sm font-medium text-gray-500">${ticket.appointmentDate}</span>
                         </div>
-                        <p class="text-gray-600">${ticket.CustAddress}</p>
-                        <div class="mt-2">
-                            <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-indigo-600 bg-indigo-200">
-                                ${ticket.status}
+                        <p class="text-gray-600 mt-1">${ticket.CustAddress}</p>
+                        <div class="mt-3">
+                            <span class="text-xs font-semibold inline-block py-1 px-3 uppercase rounded-full text-indigo-600 bg-indigo-200">
+                                ${ticket.status || 'Booked'}
                             </span>
-                             <span class="text-sm text-gray-700 ml-2">Tech: ${ticket.TechName}</span>
+                            <span class="text-sm text-gray-700 ml-2">Tech: ${ticket.TechName}</span>
                         </div>
                     `;
+                    ticketDiv.addEventListener('click', () => showTicketDetails(ticket.ticketId));
                     ticketsList.appendChild(ticketDiv);
                 });
             });
 
+            // Technicians Listener
             const techsRef = ref(db, 'technicians');
             onValue(techsRef, snapshot => {
                 const techniciansList = document.getElementById('technicians-list');
                 techniciansList.innerHTML = '';
                 const techs = snapshot.val() || {};
                 Object.values(techs).forEach(tech => {
-                    const techP = document.createElement('p');
-                    techP.className = 'p-2 border-b';
-                    techP.textContent = `${tech.TechName} (${tech.TechRegion})`;
-                    techniciansList.appendChild(techP);
+                    const techDiv = document.createElement('div');
+                    techDiv.className = 'p-3 border-b flex justify-between items-center';
+                    techDiv.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-gray-800">${tech.TechName}</p>
+                            <p class="text-sm text-gray-500">${tech.TechRegion}</p>
+                        </div>
+                        <button class="delete-tech-btn text-red-500 hover:text-red-700 font-bold" data-tech-id="${tech.TechID}">X</button>
+                    `;
+                    techniciansList.appendChild(techDiv);
                 });
+            });
+
+            // Appointments Listener for Today
+            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            const appointmentsRef = ref(db, `appointments/${today}`);
+            onValue(appointmentsRef, snapshot => {
+                const appointmentsList = document.getElementById('appointments-list');
+                appointmentsList.innerHTML = '';
+                const appointments = snapshot.val() || {};
+                let hasAppointments = false;
+                Object.entries(appointments).forEach(([techId, bookings]) => {
+                    Object.values(bookings).forEach(booking => {
+                        hasAppointments = true;
+                        const apptP = document.createElement('p');
+                        apptP.className = 'p-2 border-b text-sm';
+                        apptP.innerHTML = `<strong class="text-indigo-600">${booking.start}-${booking.end}</strong> with ${techId} (Ticket: ${booking.ticketId})`;
+                        appointmentsList.appendChild(apptP);
+                    });
+                });
+                if (!hasAppointments) {
+                    appointmentsList.innerHTML = `<p class="text-gray-500">No appointments booked for today yet.</p>`;
+                }
             });
         }
         
-        const techModal = document.getElementById('tech-modal');
+        // --- MODAL & CRUD LOGIC ---
+        // Technician Modal Controls
         document.getElementById('add-tech-btn').addEventListener('click', () => techModal.classList.remove('hidden'));
         document.getElementById('cancel-tech-btn').addEventListener('click', () => techModal.classList.add('hidden'));
 
+        // Save Technician
         document.getElementById('save-tech-btn').addEventListener('click', () => {
             const techId = document.getElementById('tech-id').value.trim();
             if (!techId) { alert('Technician ID is required.'); return; }
 
-            const skills = document.getElementById('tech-skills').value.split(',').map(s => s.trim());
-            const appliances = document.getElementById('tech-appliances').value.split(',').map(s => s.trim());
+            const skills = document.getElementById('tech-skills').value.split(',').map(s => s.trim()).filter(Boolean);
+            const appliances = document.getElementById('tech-appliances').value.split(',').map(s => s.trim()).filter(Boolean);
             
             const techData = {
-                TechID: techId,
-                TechName: document.getElementById('tech-name').value,
-                TechPhone: document.getElementById('tech-phone').value,
-                TechRegion: document.getElementById('tech-region').value,
-                skills: skills,
-                appliances_supported: appliances,
+                TechID: techId, TechName: document.getElementById('tech-name').value, TechPhone: document.getElementById('tech-phone').value,
+                TechRegion: document.getElementById('tech-region').value, skills: skills, appliances_supported: appliances,
                 working_hours: { monday: "09:00-18:00", tuesday: "09:00-18:00", wednesday: "09:00-18:00", thursday: "09:00-18:00", friday: "09:00-18:00", saturday: "10:00-14:00", sunday: "none" }
             };
 
             const updates = {};
             updates[`/technicians/${techId}`] = techData;
-            skills.forEach(skill => {
-                if (skill) updates[`/techniciansBySkill/${skill}/${techId}`] = true;
-            });
-            appliances.forEach(appliance => {
-                 if(appliance) updates[`/techniciansByAppliance/${appliance}/${techId}`] = true;
-            });
+            skills.forEach(skill => { updates[`/techniciansBySkill/${skill}/${techId}`] = true; });
+            appliances.forEach(appliance => { updates[`/techniciansByAppliance/${appliance}/${techId}`] = true; });
 
-            update(ref(db), updates)
-                .then(() => {
-                    techModal.classList.add('hidden');
-                    // Clear form fields
-                    document.getElementById('tech-id').value = '';
-                    document.getElementById('tech-name').value = '';
-                    document.getElementById('tech-phone').value = '';
-                    document.getElementById('tech-region').value = '';
-                    document.getElementById('tech-skills').value = '';
-                    document.getElementById('tech-appliances').value = '';
-                })
-                .catch(err => alert('Error saving technician: ' + err.message));
+            update(ref(db), updates).then(() => {
+                techModal.classList.add('hidden');
+                document.getElementById('tech-id').value = ''; document.getElementById('tech-name').value = ''; document.getElementById('tech-phone').value = '';
+                document.getElementById('tech-region').value = ''; document.getElementById('tech-skills').value = ''; document.getElementById('tech-appliances').value = '';
+            }).catch(err => alert('Error saving technician: ' + err.message));
         });
 
+        // Delete Technician (Event Delegation)
+        document.getElementById('technicians-list').addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('delete-tech-btn')) {
+                const techId = e.target.getAttribute('data-tech-id');
+                if (confirm(`Are you sure you want to delete technician ${techId}?`)) {
+                    // Fetch the tech's data to know which indexes to clean up
+                    const techRef = ref(db, `/technicians/${techId}`);
+                    onValue(techRef, (snapshot) => {
+                        const techData = snapshot.val();
+                        if (techData) {
+                            const updates = {};
+                            updates[`/technicians/${techId}`] = null; // Delete main record
+                            techData.skills.forEach(skill => { updates[`/techniciansBySkill/${skill}/${techId}`] = null; });
+                            techData.appliances_supported.forEach(appliance => { updates[`/techniciansByAppliance/${appliance}/${techId}`] = null; });
+                            update(ref(db), updates);
+                        }
+                    }, { onlyOnce: true });
+                }
+            }
+        });
+
+        // Ticket Details Modal
+        function showTicketDetails(ticketId) {
+            const ticketRef = ref(db, `/tickets/${ticketId}`);
+            onValue(ticketRef, (snapshot) => {
+                const ticket = snapshot.val();
+                if (ticket) {
+                    const content = `
+                        <div class="flex justify-between items-start">
+                             <h3 class="text-2xl font-bold text-gray-900">${ticket.ticketId}</h3>
+                             <button id="close-ticket-modal" class="text-2xl font-bold">&times;</button>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                            <div><strong>Customer:</strong> ${ticket.CustName}</div>
+                            <div><strong>Phone:</strong> ${ticket.CustPhone}</div>
+                            <div class="col-span-2"><strong>Address:</strong> ${ticket.CustAddress}</div>
+                            <div><strong>Appliance:</strong> ${ticket.appliance}</div>
+                            <div><strong>Request Type:</strong> ${ticket.requestType}</div>
+                            <div class="col-span-2"><strong>Description:</strong> ${ticket.description}</div>
+                            <div><strong>Technician:</strong> ${ticket.TechName}</div>
+                            <div><strong>Appointment:</strong> ${ticket.appointmentDate} at ${ticket.appointmentTime}</div>
+                        </div>
+                        <div class="mt-6">
+                            <label for="status-select" class="block font-medium text-gray-700">Update Status:</label>
+                            <div class="flex items-center mt-2">
+                                <select id="status-select" class="block w-full rounded-md border-gray-300 shadow-sm p-2 ring-1 ring-inset ring-gray-300">
+                                    <option ${ticket.status === 'Booked' ? 'selected' : ''}>Booked</option>
+                                    <option ${ticket.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                    <option ${ticket.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                    <option ${ticket.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                                </select>
+                                <button id="update-status-btn" class="ml-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Update</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('ticket-modal-content').innerHTML = content;
+                    ticketModal.classList.remove('hidden');
+
+                    document.getElementById('close-ticket-modal').addEventListener('click', () => ticketModal.classList.add('hidden'));
+                    document.getElementById('update-status-btn').addEventListener('click', () => {
+                        const newStatus = document.getElementById('status-select').value;
+                        const updates = {};
+                        updates[`/tickets/${ticketId}/status`] = newStatus;
+                        update(ref(db), updates).then(() => {
+                            ticketModal.classList.add('hidden');
+                        });
+                    });
+                }
+            }, { onlyOnce: true });
+        }
     </script>
 </body>
 </html>
