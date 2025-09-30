@@ -7,8 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="h-full font-sans">
-
-    <!-- Login Screen -->
     <div id="login-container" class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-sm">
             <h2 class="mt-10 text-center text-3xl font-bold leading-9 tracking-tight text-gray-900">ServeEasy</h2>
@@ -36,7 +34,6 @@
         </div>
     </div>
 
-    <!-- Main Dashboard Screen -->
     <div id="dashboard-container" class="hidden container mx-auto p-4 md:p-6 lg:p-8">
         <div class="flex justify-between items-center mb-6 border-b pb-4">
             <h1 class="text-4xl font-bold text-gray-800">ServeEasy Dashboard</h1>
@@ -44,26 +41,21 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <!-- Left Column: Tickets -->
             <div class="lg:col-span-3">
                  <h2 class="text-2xl font-semibold mb-4 text-gray-700">Live Tickets</h2>
                  <div id="tickets-list" class="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
                     <p class="text-gray-500">Listening for new tickets...</p>
                  </div>
             </div>
-            <!-- Right Column: Technicians & Schedule -->
             <div class="lg:col-span-2 space-y-8">
-                <!-- Technicians Section -->
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-semibold text-gray-700">Technicians</h2>
                         <button id="add-tech-btn" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Add New</button>
                     </div>
                     <div id="technicians-list" class="space-y-3 max-h-60 overflow-y-auto pr-2">
-                        <!-- Technicians will be rendered here -->
                     </div>
                 </div>
-                <!-- Appointments Section -->
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-2xl font-semibold mb-4 text-gray-700">Today's Schedule</h2>
                     <div id="appointments-list" class="space-y-3">
@@ -73,9 +65,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Modals -->
-    <!-- Add/Edit Technician Modal -->
     <div id="tech-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center">
         <div class="relative p-8 bg-white w-full max-w-lg rounded-lg shadow-xl">
              <h3 class="text-2xl leading-6 font-bold text-gray-900 mb-6">Add New Technician</h3>
@@ -94,10 +83,8 @@
         </div>
     </div>
 
-    <!-- Ticket Details Modal -->
     <div id="ticket-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center">
          <div id="ticket-modal-content" class="relative p-8 bg-white w-full max-w-2xl rounded-lg shadow-xl">
-            <!-- Content will be injected by JavaScript -->
          </div>
     </div>
 
@@ -107,7 +94,6 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
         import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
 
-        // --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
         const firebaseConfig = {
             apiKey: "AIzaSyCbLaEIatyVszr6gw81Dw79W2lCMS06vcM",
             authDomain: "serveeasy-8565e.firebaseapp.com",
@@ -118,19 +104,16 @@
             appId: "1:878377272893:web:fcdc529602bcd142fe4c54",
             measurementId: "G-PB9GKG5T8L"
         };
-        // ---------------------------------------------
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // --- UI ELEMENT SELECTORS ---
         const loginContainer = document.getElementById('login-container');
         const dashboardContainer = document.getElementById('dashboard-container');
         const techModal = document.getElementById('tech-modal');
         const ticketModal = document.getElementById('ticket-modal');
 
-        // --- AUTHENTICATION LOGIC ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 loginContainer.style.display = 'none';
@@ -150,10 +133,7 @@
         });
 
         document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-        
-        // --- REAL-TIME DATA LOADING ---
         function loadRealtimeData() {
-            // Tickets Listener
             const ticketsRef = ref(db, 'tickets');
             onValue(ticketsRef, snapshot => {
                 const ticketsList = document.getElementById('tickets-list');
@@ -180,7 +160,6 @@
                 });
             });
 
-            // Technicians Listener
             const techsRef = ref(db, 'technicians');
             onValue(techsRef, snapshot => {
                 const techniciansList = document.getElementById('technicians-list');
@@ -200,7 +179,6 @@
                 });
             });
 
-            // Appointments Listener for Today
             const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
             const appointmentsRef = ref(db, `appointments/${today}`);
             onValue(appointmentsRef, snapshot => {
@@ -223,12 +201,9 @@
             });
         }
         
-        // --- MODAL & CRUD LOGIC ---
-        // Technician Modal Controls
         document.getElementById('add-tech-btn').addEventListener('click', () => techModal.classList.remove('hidden'));
         document.getElementById('cancel-tech-btn').addEventListener('click', () => techModal.classList.add('hidden'));
 
-        // Save Technician
         document.getElementById('save-tech-btn').addEventListener('click', () => {
             const techId = document.getElementById('tech-id').value.trim();
             if (!techId) { alert('Technician ID is required.'); return; }
@@ -254,18 +229,16 @@
             }).catch(err => alert('Error saving technician: ' + err.message));
         });
 
-        // Delete Technician (Event Delegation)
         document.getElementById('technicians-list').addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('delete-tech-btn')) {
                 const techId = e.target.getAttribute('data-tech-id');
                 if (confirm(`Are you sure you want to delete technician ${techId}?`)) {
-                    // Fetch the tech's data to know which indexes to clean up
                     const techRef = ref(db, `/technicians/${techId}`);
                     onValue(techRef, (snapshot) => {
                         const techData = snapshot.val();
                         if (techData) {
                             const updates = {};
-                            updates[`/technicians/${techId}`] = null; // Delete main record
+                            updates[`/technicians/${techId}`] = null; 
                             techData.skills.forEach(skill => { updates[`/techniciansBySkill/${skill}/${techId}`] = null; });
                             techData.appliances_supported.forEach(appliance => { updates[`/techniciansByAppliance/${appliance}/${techId}`] = null; });
                             update(ref(db), updates);
@@ -275,7 +248,6 @@
             }
         });
 
-        // Ticket Details Modal
         function showTicketDetails(ticketId) {
             const ticketRef = ref(db, `/tickets/${ticketId}`);
             onValue(ticketRef, (snapshot) => {
